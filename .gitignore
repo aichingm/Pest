@@ -3,7 +3,6 @@
 ### NetBeans ###
 nbproject
 nbproject/private/
-build/
 nbbuild/
 dist/
 nbdist/
