@@ -1,12 +1,13 @@
 #Pest#
-Pest is a micro unit testing framework for php applications.
+Pest is a micro unit testing framework for php applications. 
+
 As the name says testing isn't always a joy so I developed Pest (PHP-test) to make testing as simple and fast as possible. 
 No need to learn how to write tests or use a clunky testing framework if you know php already.
 
 ##Requirements##
 No requirements - except php 5.4+
 
-##instalation##
+##Instalation##
 Pest builds in to a single file located under `build/Pest.php`. This file is the only file you need to run Pest compatible unit tests. 
 You can download it from github.com or clone the repository and copy it from the working tree.
 
@@ -28,7 +29,7 @@ Run your test file with:
 
     php -d auto_prepend_file=pathTo/Pest.php myTests.php
 
-The `-d auto_prepend_file=pathTo/Pest.php` part is needed because it gives you the possibility simply switch between Pest and other implementations.
+The `-d auto_prepend_file=pathTo/Pest.php` part is needed because it gives you the possibility to simply switch between Pest and other implementations.
 
 ##Documentation##
 
@@ -57,6 +58,7 @@ We did it! Thats all you need to know to get started.
 
 
 _Note_ The $message parameter is not necessary!
+
 **assertTrue($object, $message = "")** tests if something equals true (==).
    
     $test->assertTrue(true, "true equals true"); 
