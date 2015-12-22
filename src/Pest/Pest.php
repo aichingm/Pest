@@ -10,6 +10,7 @@ class Pest {
     private $cleanUp;
     private $records = [];
     public static $DEFAULT_WRITER_NAME = "\Pest\DefaultWriter";
+    private static $EXIT_VALUE = 0;
 
     public function __construct($name) {
         $this->name = $name;
@@ -87,7 +88,30 @@ class Pest {
         if ($writer == null) {
             $writer = self::$DEFAULT_WRITER_NAME;
         }
+        
+        self::$EXIT_VALUE = $this->calculateExitValue();
+        
         $this->write($writer);
+    }
+    private function calculateExitValue(){
+        $passedTests = 0;
+        foreach ($this->tests as $test) {
+            $recordsCount = count($test->getRecords());
+            $passedRecords = 0;
+            foreach ($test->getRecords() as $record) {
+                if ($record->getStatus()) {
+                    $passedRecords++;
+                } else {
+                    if ($record->getSkipped() > 0) {
+                        $recordsCount += $record->getSkipped();
+                    }
+                }
+            }
+            if ($recordsCount === $passedRecords) {
+                $passedTests++;
+            }
+        }
+        return 100 - (int) (($passedTests / count($this->tests)) * 100);
     }
 
     public function last($skip = 0) {
@@ -199,6 +223,14 @@ class Pest {
         }
         $this->records[] = new Record($status, $message, $stackInfo);
         return $this;
+    }
+
+    public static function SETUP_EXIT_REWRITE() {
+        register_shutdown_function(function() {
+            if (error_get_last() == null) {
+                exit(self::$EXIT_VALUE);
+            }
+        });
     }
 
 }

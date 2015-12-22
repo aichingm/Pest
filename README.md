@@ -25,11 +25,27 @@ You can download it from github.com or clone the repository and copy it from the
 _Note_ You don't need to require a specific version of Pest or any other Pest like implementation.
 
 ##Run Tests##
-Run your test file with:
+Run a test file with:
+    
+    php pathTo/Pest.php myTestsFile.php
 
-    php -d auto_prepend_file=pathTo/Pest.php myTests.php
+Run all test files in a directory;
+    
+    php pathTo/Pest.php myTestsDirectory
 
-The `-d auto_prepend_file=pathTo/Pest.php` part is needed because it gives you the possibility to simply switch between Pest and other implementations.
+Run all tests in the current directory where the name of the file starts with a given prefix:
+
+    php pathTo/Pest.php TestPrefix_
+
+To Run tests without starting the Pest program (Pest will only try to set the writer), run:
+
+    php -d auto_prepend_file=pathTo/Pest.php myTestsFile.php
+
+_Note_ This is useful if the test file which you want to run needs for example the $_SERVER['self'] variable set to your file and not `pathTo/Pest.php` 
+
+_Note_ This is also useful if you want to quickly switch between Pest implementations.
+
+_Note_ Pest will __not__ change the exit code if you use this method. The command line call will exit with whatever you test script exits!
 
 ##Documentation##
 
@@ -117,6 +133,23 @@ Currently there are three writers implemented: `DefaultWriter`, `LinuxWriter` an
 1. DefaultWriter writes the results of the tests to the standard output.
 1. LinuxWriter does the same as the `DefaultWriter` but colores the output (This may only work on unix systems).
 1. JsonWriter writes the results of the tests in `json` format to the standard output.
+1. ThreeLineLinuxWriter writes the results of the tests in a very short and colored format (only three lines) to the standard output (This may only work on unix systems).
+
+##Integrating Pest##
+1. JsonWriter
+1. Exit Codes
+
+###JsonWriter###
+
+Generally this is the best way to get computable data out of Pest. The Json format is widely used and has implementations in various programming languages.
+
+###Exit Codes###
+
+Pest, if not used via `-d autp_prepend_file=abc/Pest.php`, exits with the percentage of the test which __failed__! 
+`0` means all test passed, `100` means all tests failed.
+
+_Note_ All exit codes above `100` are reserved for errors and future functions.
+
 
 
 ##Building Pest##

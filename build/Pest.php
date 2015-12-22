@@ -2,6 +2,44 @@
 
 namespace Pest;
 
+class Test {
+
+    private $code, $name, $records = [], $output;
+
+    public function getCode() {
+        return $this->code;
+    }
+
+    public function getName() {
+        return $this->name;
+    }
+
+    public function getRecords() {
+        return $this->records;
+    }
+
+    public function getOutput() {
+        return $this->output;
+    }
+
+    public function setCode($code) {
+        $this->code = $code;
+    }
+
+    public function setName($name) {
+        $this->name = $name;
+    }
+
+    public function setRecords($records) {
+        $this->records = $records;
+    }
+
+    public function setOutput($output) {
+        $this->output = $output;
+    }
+
+}
+
 class Record {
 
     private $status, $message, $stackInfo, $skipped;
@@ -47,6 +85,99 @@ class Record {
 
 }
 
+function JsonWriter(Pest $pest, $tests) {
+
+    $jo = new \stdClass();
+    $jo->unitName = $pest->getName();
+    $jo->testsCount = count($tests);
+    $jo->tests = array();
+
+    $passedTests = 0;
+    $allRecordsCount = 0;
+    $allPassedRecords = 0;
+    foreach ($tests as $test) {
+        $joTest = new \stdClass();
+        $allRecordsCount += $recordsCount = count($test->getRecords());
+        $passedRecords = 0;
+        foreach ($test->getRecords() as $record) {
+            if ($record->getStatus()) {
+                $passedRecords++;
+                $allPassedRecords++;
+            } else {
+                if ($record->getSkipped() > 0) {
+                    $allRecordsCount += $record->getSkipped();
+                    $recordsCount += $record->getSkipped();
+                }
+            }
+        }
+        if ($recordsCount === $passedRecords) {
+            $passedTests++;
+        }
+        $joTest->name = $test->getName();
+        $joTest->assertions = array();
+
+        foreach ($test->getRecords() as $record) {
+            $joRecord = new \stdClass();
+            $joRecord->status = $record->getStatus();
+
+            $joRecord->function = $record->getStackInfo()->getFunction();
+            $joRecord->message = (empty($record->getMessage()) ? "" : ": " . $record->getMessage());
+            $joRecord->file = $record->getStackInfo()->getFile();
+            $joRecord->line = ($record->getStackInfo()->getLine());
+            $joRecord->code = $record->getStackInfo()->getCode();
+            $joRecord->skipped = $record->getSkipped();
+            $joTest->assertions[] = $joRecord;
+        }
+
+        $joTest->output = $test->getOutput();
+        $joTest->assertionStatus = array("passed" => $passedRecords, "failed" => $recordsCount - $passedRecords);
+        $jo->tests[] = $joTest;
+    }
+
+    $jo->assertionStatus = array("passed" => $allPassedRecords, "failed" => $allRecordsCount - $allPassedRecords);
+    $jo->testsStatus = array("passed" => $passedTests, "failed" => $jo->testsCount - $passedTests);
+    echo json_encode($jo, JSON_PRETTY_PRINT);
+}
+
+function ThreeLineLinuxWriter(Pest $pest, $tests) {
+
+    $colored = function ($text, $color) {
+        return "\033[" . $color . "m" . $text . "\033[0m";
+    };
+    $testsCount = count($tests);
+    $passedTests = 0;
+    $allRecordsCount = 0;
+    $allPassedRecords = 0;
+    foreach ($tests as $test) {
+        $allRecordsCount += $recordsCount = count($test->getRecords());
+        $passedRecords = 0;
+        foreach ($test->getRecords() as $record) {
+            if ($record->getStatus()) {
+                $passedRecords++;
+                $allPassedRecords++;
+            } else {
+                if ($record->getSkipped() > 0) {
+                    $allRecordsCount += $record->getSkipped();
+                    $recordsCount += $record->getSkipped();
+                }
+            }
+        }
+        if ($recordsCount === $passedRecords) {
+            $passedTests++;
+        }
+    }
+    if($testsCount == $passedTests){
+        echo $colored($pest->getName(), 42);
+    }else{
+        echo $colored($pest->getName(), 41);
+    }
+    echo PHP_EOL;
+    printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
+    printf("   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
+    echo PHP_EOL;
+
+}
+
 class Pest {
 
     private $tests = [];
@@ -55,6 +186,7 @@ class Pest {
     private $cleanUp;
     private $records = [];
     public static $DEFAULT_WRITER_NAME = "\Pest\DefaultWriter";
+    private static $EXIT_VALUE = 0;
 
     public function __construct($name) {
         $this->name = $name;
@@ -132,7 +264,30 @@ class Pest {
         if ($writer == null) {
             $writer = self::$DEFAULT_WRITER_NAME;
         }
+        
+        self::$EXIT_VALUE = $this->calculateExitValue();
+        
         $this->write($writer);
+    }
+    private function calculateExitValue(){
+        $passedTests = 0;
+        foreach ($this->tests as $test) {
+            $recordsCount = count($test->getRecords());
+            $passedRecords = 0;
+            foreach ($test->getRecords() as $record) {
+                if ($record->getStatus()) {
+                    $passedRecords++;
+                } else {
+                    if ($record->getSkipped() > 0) {
+                        $recordsCount += $record->getSkipped();
+                    }
+                }
+            }
+            if ($recordsCount === $passedRecords) {
+                $passedTests++;
+            }
+        }
+        return 100 - (int) (($passedTests / count($this->tests)) * 100);
     }
 
     public function last($skip = 0) {
@@ -246,6 +401,14 @@ class Pest {
         return $this;
     }
 
+    public static function SETUP_EXIT_REWRITE() {
+        register_shutdown_function(function() {
+            if (error_get_last() == null) {
+                exit(self::$EXIT_VALUE);
+            }
+        });
+    }
+
 }
 
 class StackInfo {
@@ -297,44 +460,6 @@ class StackInfo {
 
     public function setArgs($args) {
         $this->args = $args;
-    }
-
-}
-
-class Test {
-
-    private $code, $name, $records = [], $output;
-
-    public function getCode() {
-        return $this->code;
-    }
-
-    public function getName() {
-        return $this->name;
-    }
-
-    public function getRecords() {
-        return $this->records;
-    }
-
-    public function getOutput() {
-        return $this->output;
-    }
-
-    public function setCode($code) {
-        $this->code = $code;
-    }
-
-    public function setName($name) {
-        $this->name = $name;
-    }
-
-    public function setRecords($records) {
-        $this->records = $records;
-    }
-
-    public function setOutput($output) {
-        $this->output = $output;
     }
 
 }
@@ -478,61 +603,66 @@ function DefaultWriter(Pest $pest, $tests) {
     echo PHP_EOL;
 }
 
-function JsonWriter(Pest $pest, $tests) {
 
-    $jo = new \stdClass();
-    $jo->unitName = $pest->getName();
-    $jo->testsCount = count($tests);
-    $jo->tests = array();
 
-    $passedTests = 0;
-    $allRecordsCount = 0;
-    $allPassedRecords = 0;
-    foreach ($tests as $test) {
-        $joTest = new \stdClass();
-        $allRecordsCount += $recordsCount = count($test->getRecords());
-        $passedRecords = 0;
-        foreach ($test->getRecords() as $record) {
-            if ($record->getStatus()) {
-                $passedRecords++;
-                $allPassedRecords++;
-            } else {
-                if ($record->getSkipped() > 0) {
-                    $allRecordsCount += $record->getSkipped();
-                    $recordsCount += $record->getSkipped();
+
+ if (in_array("--pest_writer", $argv)) {
+      \Pest\Pest::$DEFAULT_WRITER_NAME = $argv[array_search("--pest_writer", $argv) + 1];
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if(realpath($_SERVER['PHP_SELF']) == __FILE__){
+    $EXIT_VALUE = 0;
+    if(is_dir($argv[1])){
+        $tests = $passedTests = 0;
+        foreach (new \DirectoryIterator($argv[1]) as $fileInfo) {
+            if ($fileInfo->isDot() || $fileInfo->isDir()) {
+                continue;
+            }
+            system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' '. $fileInfo->getFilename() . ' --pest_writer "\Pest\ThreeLineLinuxWriter"', $ex_val);
+            $tests++;
+            if($ex_val == 0){
+                $passedTests++;
+            }
+        }
+        $EXIT_VALUE = 100 - (int)(($passedTests / $tests) * 100);
+    }else if(is_file($argv[1])){
+        system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' '. $argv[1] . ' --pest_writer "' . \Pest\Pest::$DEFAULT_WRITER_NAME . '"', $EXIT_VALUE);
+    }else if(isset($argv[1]) && $argv[1]{0} != '-'){
+        $tests = $passedTests = 0;
+        foreach (new \DirectoryIterator(getcwd()) as $fileInfo) {
+            if ($fileInfo->isDot() || $fileInfo->isDir()) {
+                continue;
+            }
+     
+            if(strpos($fileInfo->getFilename(), $argv[1]) === 0){
+                system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' '. $fileInfo->getFilename() . ' --pest_writer "\Pest\ThreeLineLinuxWriter"', $ex_val);
+                $tests++;
+                if($ex_val == 0){
+                    $passedTests++;
                 }
             }
         }
-        if ($recordsCount === $passedRecords) {
-            $passedTests++;
-        }
-        $joTest->name = $test->getName();
-        $joTest->assertions = array();
-
-        foreach ($test->getRecords() as $record) {
-            $joRecord = new \stdClass();
-            $joRecord->status = $record->getStatus();
-
-            $joRecord->function = $record->getStackInfo()->getFunction();
-            $joRecord->message = (empty($record->getMessage()) ? "" : ": " . $record->getMessage());
-            $joRecord->file = $record->getStackInfo()->getFile();
-            $joRecord->line = ($record->getStackInfo()->getLine());
-            $joRecord->code = $record->getStackInfo()->getCode();
-            $joRecord->skipped = $record->getSkipped();
-            $joTest->assertions[] = $joRecord;
-        }
-
-        $joTest->output = $test->getOutput();
-        $joTest->assertionStatus = array("passed" => $passedRecords, "failed" => $recordsCount - $passedRecords);
-        $jo->tests[] = $joTest;
+        $EXIT_VALUE = 100 - (int)(($passedTests / $tests) * 100);
     }
-
-    $jo->assertionStatus = array("passed" => $allPassedRecords, "failed" => $allRecordsCount - $allPassedRecords);
-    $jo->testsStatus = array("passed" => $passedTests, "failed" => $jo->testsCount - $passedTests);
-    echo json_encode($jo, JSON_PRETTY_PRINT);
+    exit($EXIT_VALUE);
+}else if (!in_array("--pest_noexit", $argv)) {
+     \Pest\Pest::SETUP_EXIT_REWRITE(); 
 }
 
-if (in_array("--pest_writer", $argv)) {
-    \Pest\Pest::$DEFAULT_WRITER_NAME = $argv[array_search("--pest_writer", $argv) + 1];
-}
+
 ?>

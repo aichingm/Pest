@@ -26,20 +26,18 @@ foreach (new DirectoryIterator(__DIR__ . DIRECTORY_SEPARATOR . 'src' . DIRECTORY
     fwrite($outFile, PHP_EOL);
 }
 
-$cliWriter = <<<EOF
-if (in_array("--pest_writer", \$argv)) {
-    \Pest\Pest::\$DEFAULT_WRITER_NAME = \$argv[array_search("--pest_writer", \$argv) + 1];
-}
-EOF;
-fwrite($outFile, "$cliWriter" . PHP_EOL);
+$boilerplate = substr(file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . "boilerplate.php"), 5);
+
+fwrite($outFile, $boilerplate);
 fwrite($outFile, "?>");
 fclose($outFile);
 $output = array();
-exec($_SERVER["_"] . " build" . DIRECTORY_SEPARATOR . "Pest.php 2>&1 /dev/null ", $output, $return_var);
-if($return_var != null){
+exec($_SERVER["_"] . " -l build" . DIRECTORY_SEPARATOR . "Pest.php 2>&1 /dev/null ", $output, $return_var);
+if($return_var != 0){
     echo PHP_EOL."Build faild. Output file has errors.".PHP_EOL;
     echo "    ".implode(PHP_EOL."    ", $output).PHP_EOL;
+    exit(1);
 }else{
     echo PHP_EOL."Build was successfull.".PHP_EOL;
+    exit(0);
 }
-

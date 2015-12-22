@@ -88,8 +88,7 @@ $t->test("Test Prepare 1", function() use ($t, $dataBox) {
     $t->assertEquals($dataBox->object->name, "Some Object");
 });
 $t->test("Test Prepare 2", function() use ($t, $dataBox) {
-    $t->assertNotEquals($dataBox->object->name, "Some Object");
-    $t->assertEmpty($dataBox->object->name);
+    $t->assertFalse(isset($dataBox->object->name));
 });
 
 $t->cleanUp(function() use ($dataBox) {
@@ -101,8 +100,7 @@ $t->test("Test CleanUp 1", function() use ($t, $dataBox) {
     $t->assertEquals($dataBox->cleanUpObject->name, "Some Object");
 });
 $t->test("Test CleanUp 2", function() use ($t, $dataBox) {
-    $t->assertNotEquals($dataBox->cleanUpObject->name, "Some Object");
-    $t->assertEmpty($dataBox->cleanUpObject->name);
+    $t->assertFalse(isset($dataBox->object->name));
 });
 
 
