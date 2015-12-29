@@ -9,7 +9,7 @@ fwrite($outFile, "namespace Pest;" . PHP_EOL);
 fwrite($outFile, PHP_EOL);
 
 foreach (new DirectoryIterator(__DIR__ . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . "Pest") as $fileInfo) {
-    if ($fileInfo->isDot()) {
+    if ($fileInfo->isDot() || strpos($fileInfo->getFilename(), '.') === 0) {
         continue;
     }
     echo $fileInfo->getFilename() . PHP_EOL;
