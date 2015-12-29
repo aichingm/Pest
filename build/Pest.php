@@ -377,11 +377,22 @@ class Pest {
     private $prepare;
     private $cleanUp;
     private $records = [];
+    private $workingDir;
+    private $options = self::OPTION_CHDIR;
+    const OPTION_CHDIR = 1;
     public static $DEFAULT_WRITER_NAME = "\Pest\DefaultWriter";
     private static $EXIT_VALUE = 0;
 
-    public function __construct($name) {
+    public function __construct($name, $options = null) {
         $this->name = $name;
+        if($options != null){
+            $this->options = $options;
+        }
+        if($this->options & self::OPTION_CHDIR){
+            $this->workingDir = getCwd();
+            $newCwd = dirname(debug_backtrace()[0]['file']);
+	    chdir($newCwd);
+        }
     }
 
     function getName() {
@@ -599,6 +610,12 @@ class Pest {
                 exit(self::$EXIT_VALUE);
             }
         });
+    }
+
+    public function __destruct(){
+        if($this->options & self::OPTION_CHDIR){
+            chdir($this->workingDir);
+        }
     }
 
 }
