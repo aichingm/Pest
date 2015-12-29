@@ -40,49 +40,168 @@ class Test {
 
 }
 
-class Record {
+function ThreeLineLinuxWriter(Pest $pest, $tests) {
 
-    private $status, $message, $stackInfo, $skipped;
+    $colored = function ($text, $color) {
+        return "\033[" . $color . "m" . $text . "\033[0m";
+    };
+    $testsCount = count($tests);
+    $passedTests = 0;
+    $allRecordsCount = 0;
+    $allPassedRecords = 0;
+    foreach ($tests as $test) {
+        $allRecordsCount += $recordsCount = count($test->getRecords());
+        $passedRecords = 0;
+        foreach ($test->getRecords() as $record) {
+            if ($record->getStatus()) {
+                $passedRecords++;
+                $allPassedRecords++;
+            } else {
+                if ($record->getSkipped() > 0) {
+                    $allRecordsCount += $record->getSkipped();
+                    $recordsCount += $record->getSkipped();
+                }
+            }
+        }
+        if ($recordsCount === $passedRecords) {
+            $passedTests++;
+        }
+    }
+    if($testsCount == $passedTests){
+        echo $colored($pest->getName(), 42);
+    }else{
+        echo $colored($pest->getName(), 41);
+    }
+    echo PHP_EOL;
+    printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
+    printf("   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
+    echo PHP_EOL;
 
-    public function __construct($status, $message, $stackInfo, $skipped = 0) {
-        $this->status = $status;
-        $this->message = $message;
-        $this->stackInfo = $stackInfo;
-        $this->skipped = $skipped;
+}
+
+class StackInfo {
+
+    private $function, $line, $file, $args, $code = null;
+
+    function __construct($function, $line, $file, $args, $code = null) {
+        $this->function = $function;
+        $this->line = $line;
+        $this->file = $file;
+        $this->args = $args;
+        $this->code = $code;
     }
 
-    public function getStatus() {
-        return $this->status;
+    public function getFunction() {
+        return $this->function;
     }
 
-    public function getMessage() {
-        return $this->message;
+    public function getLine() {
+        return $this->line;
     }
 
-    public function getStackInfo() {
-        return $this->stackInfo;
+    public function getCode() {
+        if ($this->code == null) {
+            return trim(file($this->getFile())[$this->getLine() - 1]);
+        }
+        return $this->code;
     }
 
-    public function getSkipped() {
-        return $this->skipped;
+    public function getFile() {
+        return $this->file;
     }
 
-    public function setStatus($status) {
-        $this->status = $status;
+    public function getArgs() {
+        return $this->args;
     }
 
-    public function setMessage($message) {
-        $this->message = $message;
+    public function setFunction($function) {
+        $this->function = $function;
     }
 
-    public function setStackInfo($stackInfo) {
-        $this->stackInfo = $stackInfo;
+    public function setLine($line) {
+        $this->line = $line;
     }
 
-    public function setSkipped($skipped) {
-        $this->skipped = $skipped;
+    public function setFile($file) {
+        $this->file = $file;
     }
 
+    public function setArgs($args) {
+        $this->args = $args;
+    }
+
+}
+
+function LinuxWriter(Pest $pest, $tests) {
+
+    $colored = function ($text, $color) {
+        return "\033[" . $color . "m" . $text . "\033[0m";
+    };
+
+    echo str_pad("", 80, '#') . PHP_EOL;
+    echo PHP_EOL;
+    echo "   " . $pest->getName() . PHP_EOL;
+    echo PHP_EOL;
+    echo str_pad("", 80, '#') . PHP_EOL;
+    $testsCount = count($tests);
+    $passedTests = 0;
+    $allRecordsCount = 0;
+    $allPassedRecords = 0;
+    foreach ($tests as $test) {
+        $allRecordsCount += $recordsCount = count($test->getRecords());
+        $passedRecords = 0;
+        foreach ($test->getRecords() as $record) {
+            if ($record->getStatus()) {
+                $passedRecords++;
+                $allPassedRecords++;
+            } else {
+                if ($record->getSkipped() > 0) {
+                    $allRecordsCount += $record->getSkipped();
+                    $recordsCount += $record->getSkipped();
+                }
+            }
+        }
+        if ($recordsCount === $passedRecords) {
+            $status = "[" . $colored("passed", 42) . "] ";
+            $passedTests++;
+        } else {
+            $status = "[" . $colored("failed", 41) . "] ";
+        }
+
+        echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
+
+        foreach ($test->getRecords() as $record) {
+            if ($record->getStatus()) {
+                $status = "      [" . $colored("passed", 42) . "] ";
+            } else {
+                $status = "      [" . $colored("failed", 41) . "] ";
+            }
+            echo $status . $record->getStackInfo()->getFunction() . (empty($record->getMessage()) ? "" : ": " . $record->getMessage()) . PHP_EOL . PHP_EOL;
+            echo "         File: " . $record->getStackInfo()->getFile() . PHP_EOL;
+            echo "         Line: " . ($record->getStackInfo()->getLine()) . PHP_EOL;
+            echo "         " . $record->getStackInfo()->getCode() . PHP_EOL . PHP_EOL;
+            if ($record->getSkipped() > 0) {
+                echo "         " . $colored("SKIPPED", 43) . " " . $record->getSkipped() . " assertions because of this assertion" . PHP_EOL . PHP_EOL;
+            }
+        }
+
+        if (!empty($test->getOutput())) {
+            echo "   Test output:" . PHP_EOL;
+            foreach (explode(PHP_EOL, $test->getOutput()) as $line) {
+                echo "         " . $line . PHP_EOL;
+            }
+        }
+
+
+        printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedRecords, $recordsCount - $passedRecords, $passedRecords / $recordsCount * 100);
+        echo "   " . str_pad("", 77, '-') . PHP_EOL;
+    }
+
+    echo PHP_EOL;
+    echo str_pad("", 80, '#') . PHP_EOL;
+    printf("\n   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
+    printf("\n   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
+    echo PHP_EOL;
 }
 
 function JsonWriter(Pest $pest, $tests) {
@@ -139,11 +258,12 @@ function JsonWriter(Pest $pest, $tests) {
     echo json_encode($jo, JSON_PRETTY_PRINT);
 }
 
-function ThreeLineLinuxWriter(Pest $pest, $tests) {
-
-    $colored = function ($text, $color) {
-        return "\033[" . $color . "m" . $text . "\033[0m";
-    };
+function DefaultWriter(Pest $pest, $tests) {
+    echo str_pad("", 80, '#') . PHP_EOL;
+    echo PHP_EOL;
+    echo "   " . $pest->getName() . PHP_EOL;
+    echo PHP_EOL;
+    echo str_pad("", 80, '#') . PHP_EOL;
     $testsCount = count($tests);
     $passedTests = 0;
     $allRecordsCount = 0;
@@ -163,18 +283,90 @@ function ThreeLineLinuxWriter(Pest $pest, $tests) {
             }
         }
         if ($recordsCount === $passedRecords) {
+            $status = "[passed] ";
             $passedTests++;
+        } else {
+            $status = "[failed] ";
         }
+
+        echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
+
+        foreach ($test->getRecords() as $record) {
+            if ($record->getStatus()) {
+                $status = "      [passed] ";
+            } else {
+                $status = "      [failed] ";
+            }
+            echo $status . $record->getStackInfo()->getFunction() . (empty($record->getMessage()) ? "" : ": " . $record->getMessage()) . PHP_EOL . PHP_EOL;
+            echo "         File: " . $record->getStackInfo()->getFile() . PHP_EOL;
+            echo "         Line: " . ($record->getStackInfo()->getLine()) . PHP_EOL;
+            echo "         " . $record->getStackInfo()->getCode() . PHP_EOL . PHP_EOL;
+            if ($record->getSkipped() > 0) {
+                echo "         SKIPPED " . $record->getSkipped() . " assertions because of this assertion" . PHP_EOL . PHP_EOL;
+            }
+        }
+
+        if (!empty($test->getOutput())) {
+            echo "   Test output:" . PHP_EOL;
+            foreach (explode(PHP_EOL, $test->getOutput()) as $line) {
+                echo "         " . $line . PHP_EOL;
+            }
+        }
+
+
+        printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedRecords, $recordsCount - $passedRecords, $passedRecords / $recordsCount * 100);
+        echo "   " . str_pad("", 77, '-') . PHP_EOL;
     }
-    if($testsCount == $passedTests){
-        echo $colored($pest->getName(), 42);
-    }else{
-        echo $colored($pest->getName(), 41);
+
+    echo PHP_EOL;
+    echo str_pad("", 80, '#') . PHP_EOL;
+    printf("\n   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
+    printf("\n   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
+    echo PHP_EOL;
+}
+
+class Record {
+
+    private $status, $message, $stackInfo, $skipped;
+
+    public function __construct($status, $message, $stackInfo, $skipped = 0) {
+        $this->status = $status;
+        $this->message = $message;
+        $this->stackInfo = $stackInfo;
+        $this->skipped = $skipped;
     }
-    echo PHP_EOL;
-    printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
-    printf("   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
-    echo PHP_EOL;
+
+    public function getStatus() {
+        return $this->status;
+    }
+
+    public function getMessage() {
+        return $this->message;
+    }
+
+    public function getStackInfo() {
+        return $this->stackInfo;
+    }
+
+    public function getSkipped() {
+        return $this->skipped;
+    }
+
+    public function setStatus($status) {
+        $this->status = $status;
+    }
+
+    public function setMessage($message) {
+        $this->message = $message;
+    }
+
+    public function setStackInfo($stackInfo) {
+        $this->stackInfo = $stackInfo;
+    }
+
+    public function setSkipped($skipped) {
+        $this->skipped = $skipped;
+    }
 
 }
 
@@ -411,218 +603,12 @@ class Pest {
 
 }
 
-class StackInfo {
-
-    private $function, $line, $file, $args, $code = null;
-
-    function __construct($function, $line, $file, $args, $code = null) {
-        $this->function = $function;
-        $this->line = $line;
-        $this->file = $file;
-        $this->args = $args;
-        $this->code = $code;
-    }
-
-    public function getFunction() {
-        return $this->function;
-    }
-
-    public function getLine() {
-        return $this->line;
-    }
-
-    public function getCode() {
-        if ($this->code == null) {
-            return trim(file($this->getFile())[$this->getLine() - 1]);
-        }
-        return $this->code;
-    }
-
-    public function getFile() {
-        return $this->file;
-    }
-
-    public function getArgs() {
-        return $this->args;
-    }
-
-    public function setFunction($function) {
-        $this->function = $function;
-    }
-
-    public function setLine($line) {
-        $this->line = $line;
-    }
-
-    public function setFile($file) {
-        $this->file = $file;
-    }
-
-    public function setArgs($args) {
-        $this->args = $args;
-    }
-
-}
-
-function LinuxWriter(Pest $pest, $tests) {
-
-    $colored = function ($text, $color) {
-        return "\033[" . $color . "m" . $text . "\033[0m";
-    };
-
-    echo str_pad("", 80, '#') . PHP_EOL;
-    echo PHP_EOL;
-    echo "   " . $pest->getName() . PHP_EOL;
-    echo PHP_EOL;
-    echo str_pad("", 80, '#') . PHP_EOL;
-    $testsCount = count($tests);
-    $passedTests = 0;
-    $allRecordsCount = 0;
-    $allPassedRecords = 0;
-    foreach ($tests as $test) {
-        $allRecordsCount += $recordsCount = count($test->getRecords());
-        $passedRecords = 0;
-        foreach ($test->getRecords() as $record) {
-            if ($record->getStatus()) {
-                $passedRecords++;
-                $allPassedRecords++;
-            } else {
-                if ($record->getSkipped() > 0) {
-                    $allRecordsCount += $record->getSkipped();
-                    $recordsCount += $record->getSkipped();
-                }
-            }
-        }
-        if ($recordsCount === $passedRecords) {
-            $status = "[" . $colored("passed", 42) . "] ";
-            $passedTests++;
-        } else {
-            $status = "[" . $colored("failed", 41) . "] ";
-        }
-
-        echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
-
-        foreach ($test->getRecords() as $record) {
-            if ($record->getStatus()) {
-                $status = "      [" . $colored("passed", 42) . "] ";
-            } else {
-                $status = "      [" . $colored("failed", 41) . "] ";
-            }
-            echo $status . $record->getStackInfo()->getFunction() . (empty($record->getMessage()) ? "" : ": " . $record->getMessage()) . PHP_EOL . PHP_EOL;
-            echo "         File: " . $record->getStackInfo()->getFile() . PHP_EOL;
-            echo "         Line: " . ($record->getStackInfo()->getLine()) . PHP_EOL;
-            echo "         " . $record->getStackInfo()->getCode() . PHP_EOL . PHP_EOL;
-            if ($record->getSkipped() > 0) {
-                echo "         " . $colored("SKIPPED", 43) . " " . $record->getSkipped() . " assertions because of this assertion" . PHP_EOL . PHP_EOL;
-            }
-        }
-
-        if (!empty($test->getOutput())) {
-            echo "   Test output:" . PHP_EOL;
-            foreach (explode(PHP_EOL, $test->getOutput()) as $line) {
-                echo "         " . $line . PHP_EOL;
-            }
-        }
-
-
-        printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedRecords, $recordsCount - $passedRecords, $passedRecords / $recordsCount * 100);
-        echo "   " . str_pad("", 77, '-') . PHP_EOL;
-    }
-
-    echo PHP_EOL;
-    echo str_pad("", 80, '#') . PHP_EOL;
-    printf("\n   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
-    printf("\n   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
-    echo PHP_EOL;
-}
-
-function DefaultWriter(Pest $pest, $tests) {
-    echo str_pad("", 80, '#') . PHP_EOL;
-    echo PHP_EOL;
-    echo "   " . $pest->getName() . PHP_EOL;
-    echo PHP_EOL;
-    echo str_pad("", 80, '#') . PHP_EOL;
-    $testsCount = count($tests);
-    $passedTests = 0;
-    $allRecordsCount = 0;
-    $allPassedRecords = 0;
-    foreach ($tests as $test) {
-        $allRecordsCount += $recordsCount = count($test->getRecords());
-        $passedRecords = 0;
-        foreach ($test->getRecords() as $record) {
-            if ($record->getStatus()) {
-                $passedRecords++;
-                $allPassedRecords++;
-            } else {
-                if ($record->getSkipped() > 0) {
-                    $allRecordsCount += $record->getSkipped();
-                    $recordsCount += $record->getSkipped();
-                }
-            }
-        }
-        if ($recordsCount === $passedRecords) {
-            $status = "[passed] ";
-            $passedTests++;
-        } else {
-            $status = "[failed] ";
-        }
-
-        echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
-
-        foreach ($test->getRecords() as $record) {
-            if ($record->getStatus()) {
-                $status = "      [passed] ";
-            } else {
-                $status = "      [failed] ";
-            }
-            echo $status . $record->getStackInfo()->getFunction() . (empty($record->getMessage()) ? "" : ": " . $record->getMessage()) . PHP_EOL . PHP_EOL;
-            echo "         File: " . $record->getStackInfo()->getFile() . PHP_EOL;
-            echo "         Line: " . ($record->getStackInfo()->getLine()) . PHP_EOL;
-            echo "         " . $record->getStackInfo()->getCode() . PHP_EOL . PHP_EOL;
-            if ($record->getSkipped() > 0) {
-                echo "         SKIPPED " . $record->getSkipped() . " assertions because of this assertion" . PHP_EOL . PHP_EOL;
-            }
-        }
-
-        if (!empty($test->getOutput())) {
-            echo "   Test output:" . PHP_EOL;
-            foreach (explode(PHP_EOL, $test->getOutput()) as $line) {
-                echo "         " . $line . PHP_EOL;
-            }
-        }
-
-
-        printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedRecords, $recordsCount - $passedRecords, $passedRecords / $recordsCount * 100);
-        echo "   " . str_pad("", 77, '-') . PHP_EOL;
-    }
-
-    echo PHP_EOL;
-    echo str_pad("", 80, '#') . PHP_EOL;
-    printf("\n   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
-    printf("\n   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
-    echo PHP_EOL;
-}
-
 
 
 
  if (in_array("--pest_writer", $argv)) {
       \Pest\Pest::$DEFAULT_WRITER_NAME = $argv[array_search("--pest_writer", $argv) + 1];
  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 if(realpath($_SERVER['PHP_SELF']) == __FILE__){
@@ -633,7 +619,7 @@ if(realpath($_SERVER['PHP_SELF']) == __FILE__){
             if ($fileInfo->isDot() || $fileInfo->isDir()) {
                 continue;
             }
-            system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' '. $fileInfo->getFilename() . ' --pest_writer "\Pest\ThreeLineLinuxWriter"', $ex_val);
+            system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' '. $argv[1] . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . ' --pest_writer "\Pest\ThreeLineLinuxWriter"', $ex_val);
             $tests++;
             if($ex_val == 0){
                 $passedTests++;

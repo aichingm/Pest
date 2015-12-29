@@ -6,20 +6,6 @@
  }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 if(realpath($_SERVER['PHP_SELF']) == __FILE__){
     $EXIT_VALUE = 0;
     if(is_dir($argv[1])){
@@ -28,7 +14,7 @@ if(realpath($_SERVER['PHP_SELF']) == __FILE__){
             if ($fileInfo->isDot() || $fileInfo->isDir()) {
                 continue;
             }
-            system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' '. $fileInfo->getFilename() . ' --pest_writer "\Pest\ThreeLineLinuxWriter"', $ex_val);
+            system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' '. $argv[1] . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . ' --pest_writer "\Pest\ThreeLineLinuxWriter"', $ex_val);
             $tests++;
             if($ex_val == 0){
                 $passedTests++;
