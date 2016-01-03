@@ -45,6 +45,13 @@ function DefaultWriter(Pest $pest, $tests) {
             echo "         File: " . $record->getStackInfo()->getFile() . PHP_EOL;
             echo "         Line: " . ($record->getStackInfo()->getLine()) . PHP_EOL;
             echo "         " . $record->getStackInfo()->getCode() . PHP_EOL . PHP_EOL;
+            if (!$record->getStatus()) {
+                for ($i = 0; $i < count($record->getValues()); $i++) {
+                    $value = $record->getValues()[$i];
+                    echo "            #$i " . gettype($value) . "(" . var_export($value, true) . ")" . PHP_EOL;
+                }
+            }
+            echo PHP_EOL;
             if ($record->getSkipped() > 0) {
                 echo "         SKIPPED " . $record->getSkipped() . " assertions because of this assertion" . PHP_EOL . PHP_EOL;
             }

@@ -141,55 +141,55 @@ class Pest {
 
     public function assertTrue($object, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record($object == true, $message, $stackInfo);
+        $this->records[] = new Record($object == true, $message, $stackInfo, array($object));
         return $this;
     }
 
     public function assertFalse($object, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record($object == false, $message, $stackInfo);
+        $this->records[] = new Record($object == false, $message, $stackInfo, array($object));
         return $this;
     }
 
     public function assertEmpty($object, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record(empty($object), $message, $stackInfo);
+        $this->records[] = new Record(empty($object), $message, $stackInfo, array($object));
         return $this;
     }
 
     public function assertNotEmpty($object, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record(!empty($object), $message, $stackInfo);
+        $this->records[] = new Record(!empty($object), $message, $stackInfo, array($object));
         return $this;
     }
 
     public function assertEquals($a, $b, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record($a == $b, $message, $stackInfo);
+        $this->records[] = new Record($a == $b, $message, $stackInfo, array($a, $b));
         return $this;
     }
 
     public function assertSame($a, $b, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record($a === $b, $message, $stackInfo);
+        $this->records[] = new Record($a === $b, $message, $stackInfo, array($a, $b));
         return $this;
     }
 
     public function assertNotEquals($a, $b, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record($a != $b, $message, $stackInfo);
+        $this->records[] = new Record($a != $b, $message, $stackInfo, array($a, $b));
         return $this;
     }
 
     public function assertNotSame($a, $b, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record($a !== $b, $message, $stackInfo);
+        $this->records[] = new Record($a !== $b, $message, $stackInfo, array($a, $b));
         return $this;
     }
 
     public function assertSameValues(array $a, array $b, $message = "") {
         $stackInfo = $this->extractStackInfo();
-        $this->records[] = new Record(count(array_diff($a, $b)) === 0 && count(array_diff($b, $a)) === 0, $message, $stackInfo);
+        $this->records[] = new Record(count(array_diff($a, $b)) === 0 && count(array_diff($b, $a)) === 0, $message, $stackInfo, array($a, $b));
         return $this;
     }
 

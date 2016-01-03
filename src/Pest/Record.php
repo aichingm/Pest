@@ -4,12 +4,13 @@ namespace Pest;
 
 class Record {
 
-    private $status, $message, $stackInfo, $skipped;
+    private $status, $message, $stackInfo, $values, $skipped;
 
-    public function __construct($status, $message, $stackInfo, $skipped = 0) {
+    public function __construct($status, $message, $stackInfo, array $values = array(), $skipped = 0) {
         $this->status = $status;
         $this->message = $message;
         $this->stackInfo = $stackInfo;
+        $this->values = $values;
         $this->skipped = $skipped;
     }
 
@@ -44,5 +45,13 @@ class Record {
     public function setSkipped($skipped) {
         $this->skipped = $skipped;
     }
+    function getValues() {
+        return $this->values;
+    }
+
+    function setValues(array $values) {
+        $this->values = $values;
+    }
+
 
 }

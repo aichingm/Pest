@@ -42,6 +42,7 @@ function JsonWriter(Pest $pest, $tests) {
             $joRecord->file = $record->getStackInfo()->getFile();
             $joRecord->line = ($record->getStackInfo()->getLine());
             $joRecord->code = $record->getStackInfo()->getCode();
+            $joRecord->values = $record->getValues();
             $joRecord->skipped = $record->getSkipped();
             $joTest->assertions[] = $joRecord;
         }
