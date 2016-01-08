@@ -9,28 +9,29 @@ class Utils {
      * @var array 
      */
     private static $TMP_FILES = array();
+
     /**
      * a stack of last visited directories
      * @var array
      */
     private static $DIR_STACK = array();
-    
+
     /**
      * Change Directory
      * @param string|null $dir the new working directory or null to go back to the old working directory
      * @return string last working directory
      * @throws \InvalidArgumentException if $dir is not null nor a directory
      */
-    public static function CD($dir = null){
-        if(!is_null($dir)){
-            if(!is_dir($dir)){
+    public static function CD($dir = null) {
+        if (!is_null($dir)) {
+            if (!is_dir($dir)) {
                 throw new \InvalidArgumentException("expected directory");
             }
             self::$DIR_STACK[] = getcwd();
             chdir($dir);
             return end(self::$DIR_STACK);
-        }else{
-            if(count(self::$DIR_STACK) <= 0){
+        } else {
+            if (count(self::$DIR_STACK) <= 0) {
                 throw new \LogicException("empty directory stack");
             }
             $oldDir = getcwd();
@@ -38,15 +39,34 @@ class Utils {
             chdir($dir);
             return $oldDir;
         }
-        
     }
-    
+
     /**
      * Changes the working directory to the systems temporary directory and returns the "old" working directory
      * @return string the old working directory
      */
     public static function CD_TMP() {
         return self::CD(sys_get_temp_dir());
+    }
+
+    /**
+     * Runs the $function in the given directory if the given directory is null 
+     * it will use the temporary directory and then changes directory back to 
+     * where it came from
+     * @param callable $function
+     * @param string $directory the directoy in which the code should run
+     * @return mixed returns the output of $function
+     */
+    public static function RUN_IN(callable $function, $directory = null) {
+        if (is_null($directory)) {
+            self::CD_TMP();
+        } else {
+            self::CD($directory);
+        }
+
+        $return = $function();
+        self::CD();
+        return $return;
     }
 
     /**
@@ -57,6 +77,7 @@ class Utils {
     public static function TMP_FILE($prefix = "Pst") {
         return self::$TMP_FILES[] = tempnam(sys_get_temp_dir(), $prefix);
     }
+
     /**
      * Cleans up all temporary created files (Utils::TMP_FILE())
      */

@@ -156,6 +156,16 @@ $t->test("Test Utils::TMP_FILE(), Utils::RM_TMP_FILES()", function() use ($t) {
     $t->assertFalse(is_dir("this"));
     Pest\Utils::CD();
 });
+$t->test("Test Utils::RUN_IN_TMP()", function() use ($t) {
+    $returnValue1 = Pest\Utils::RUN_IN(function(){
+        return getcwd();
+    });
+    $returnValue2 = Pest\Utils::RUN_IN(function(){
+        return getcwd();
+    }, dirname(__DIR__));
+    $t->assertEquals($returnValue1, sys_get_temp_dir());
+    $t->assertEquals($returnValue2, dirname(__DIR__));
+});
 
 
 
