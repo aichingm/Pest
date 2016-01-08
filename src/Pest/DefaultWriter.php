@@ -3,6 +3,14 @@
 namespace Pest;
 
 function DefaultWriter(Pest $pest, $tests) {
+    $dump = function($mixed) {
+        switch (gettype($mixed)) {
+            case 'string':
+                return "string[" . strlen($mixed) . "](" . var_export($mixed, true) . ")";
+            default :
+                return gettype($mixed) . "(" . var_export($mixed, true) . ")";
+        }
+    };
     echo str_pad("", 80, '#') . PHP_EOL;
     echo PHP_EOL;
     echo "   " . $pest->getName() . PHP_EOL;
@@ -48,7 +56,7 @@ function DefaultWriter(Pest $pest, $tests) {
             if (!$record->getStatus()) {
                 for ($i = 0; $i < count($record->getValues()); $i++) {
                     $value = $record->getValues()[$i];
-                    echo "            #$i " . gettype($value) . "(" . var_export($value, true) . ")" . PHP_EOL;
+                    echo "            #$i " . $dump($value) . PHP_EOL;
                 }
             }
             echo PHP_EOL;
