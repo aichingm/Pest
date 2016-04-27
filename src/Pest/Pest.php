@@ -11,19 +11,24 @@ class Pest {
     private $records = [];
     private $workingDir;
     private $options = self::OPTION_CHDIR;
+
     const OPTION_CHDIR = 1;
-    public static $DEFAULT_WRITER_NAME = "\Pest\DefaultWriter";
+    const CONFIG_DEFAULT_WRITER_NAME = "DEFAULT_WRITER_NAME";
+
+    private static $CONFIGURATION = array(
+        self::CONFIG_DEFAULT_WRITER_NAME => "\Pest\DefaultWriter"
+    );
     private static $EXIT_VALUE = 0;
 
     public function __construct($name, $options = null) {
         $this->name = $name;
-        if($options != null){
+        if ($options != null) {
             $this->options = $options;
         }
-        if($this->options & self::OPTION_CHDIR){
+        if ($this->options & self::OPTION_CHDIR) {
             $this->workingDir = getCwd();
             $newCwd = dirname(debug_backtrace()[0]['file']);
-	    chdir($newCwd);
+            chdir($newCwd);
         }
     }
 
@@ -97,14 +102,15 @@ class Pest {
             }
         }
         if ($writer == null) {
-            $writer = self::$DEFAULT_WRITER_NAME;
+            $writer = self::$CONFIGURATION[self::CONFIG_DEFAULT_WRITER_NAME];
         }
-        
+
         self::$EXIT_VALUE = $this->calculateExitValue();
-        
+
         $this->write($writer);
     }
-    private function calculateExitValue(){
+
+    private function calculateExitValue() {
         $passedTests = 0;
         foreach ($this->tests as $test) {
             $recordsCount = count($test->getRecords());
@@ -244,8 +250,12 @@ class Pest {
         });
     }
 
-    public function __destruct(){
-        if($this->options & self::OPTION_CHDIR){
+    public static function SET_CONFIGURATION(array $configuration) {
+        self::$CONFIGURATION = $configuration;
+    }
+
+    public function __destruct() {
+        if ($this->options & self::OPTION_CHDIR) {
             chdir($this->workingDir);
         }
     }

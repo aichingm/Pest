@@ -2,44 +2,6 @@
 
 namespace Pest;
 
-class Test {
-
-    private $code, $name, $records = [], $output;
-
-    public function getCode() {
-        return $this->code;
-    }
-
-    public function getName() {
-        return $this->name;
-    }
-
-    public function getRecords() {
-        return $this->records;
-    }
-
-    public function getOutput() {
-        return $this->output;
-    }
-
-    public function setCode($code) {
-        $this->code = $code;
-    }
-
-    public function setName($name) {
-        $this->name = $name;
-    }
-
-    public function setRecords($records) {
-        $this->records = $records;
-    }
-
-    public function setOutput($output) {
-        $this->output = $output;
-    }
-
-}
-
 class Record {
 
     private $status, $message, $stackInfo, $values, $skipped;
@@ -94,100 +56,6 @@ class Record {
 
 }
 
-function JsonWriter(Pest $pest, $tests) {
-
-    $jo = new \stdClass();
-    $jo->unitName = $pest->getName();
-    $jo->testsCount = count($tests);
-    $jo->tests = array();
-
-    $passedTests = 0;
-    $allRecordsCount = 0;
-    $allPassedRecords = 0;
-    foreach ($tests as $test) {
-        $joTest = new \stdClass();
-        $allRecordsCount += $recordsCount = count($test->getRecords());
-        $passedRecords = 0;
-        foreach ($test->getRecords() as $record) {
-            if ($record->getStatus()) {
-                $passedRecords++;
-                $allPassedRecords++;
-            } else {
-                if ($record->getSkipped() > 0) {
-                    $allRecordsCount += $record->getSkipped();
-                    $recordsCount += $record->getSkipped();
-                }
-            }
-        }
-        if ($recordsCount === $passedRecords) {
-            $passedTests++;
-        }
-        $joTest->name = $test->getName();
-        $joTest->assertions = array();
-
-        foreach ($test->getRecords() as $record) {
-            $joRecord = new \stdClass();
-            $joRecord->status = $record->getStatus();
-
-            $joRecord->function = $record->getStackInfo()->getFunction();
-            $joRecord->message = (empty($record->getMessage()) ? "" : ": " . $record->getMessage());
-            $joRecord->file = $record->getStackInfo()->getFile();
-            $joRecord->line = ($record->getStackInfo()->getLine());
-            $joRecord->code = $record->getStackInfo()->getCode();
-            $joRecord->values = $record->getValues();
-            $joRecord->skipped = $record->getSkipped();
-            $joTest->assertions[] = $joRecord;
-        }
-
-        $joTest->output = $test->getOutput();
-        $joTest->assertionStatus = array("passed" => $passedRecords, "failed" => $recordsCount - $passedRecords);
-        $jo->tests[] = $joTest;
-    }
-
-    $jo->assertionStatus = array("passed" => $allPassedRecords, "failed" => $allRecordsCount - $allPassedRecords);
-    $jo->testsStatus = array("passed" => $passedTests, "failed" => $jo->testsCount - $passedTests);
-    echo json_encode($jo, JSON_PRETTY_PRINT);
-}
-
-function ThreeLineLinuxWriter(Pest $pest, $tests) {
-
-    $colored = function ($text, $color) {
-        return "\033[" . $color . "m" . $text . "\033[0m";
-    };
-    $testsCount = count($tests);
-    $passedTests = 0;
-    $allRecordsCount = 0;
-    $allPassedRecords = 0;
-    foreach ($tests as $test) {
-        $allRecordsCount += $recordsCount = count($test->getRecords());
-        $passedRecords = 0;
-        foreach ($test->getRecords() as $record) {
-            if ($record->getStatus()) {
-                $passedRecords++;
-                $allPassedRecords++;
-            } else {
-                if ($record->getSkipped() > 0) {
-                    $allRecordsCount += $record->getSkipped();
-                    $recordsCount += $record->getSkipped();
-                }
-            }
-        }
-        if ($recordsCount === $passedRecords) {
-            $passedTests++;
-        }
-    }
-    if($testsCount == $passedTests){
-        echo $colored($pest->getName(), 42);
-    }else{
-        echo $colored($pest->getName(), 41);
-    }
-    echo PHP_EOL;
-    printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
-    printf("   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
-    echo PHP_EOL;
-
-}
-
 class Pest {
 
     private $tests = [];
@@ -197,19 +65,24 @@ class Pest {
     private $records = [];
     private $workingDir;
     private $options = self::OPTION_CHDIR;
+
     const OPTION_CHDIR = 1;
-    public static $DEFAULT_WRITER_NAME = "\Pest\DefaultWriter";
+    const CONFIG_DEFAULT_WRITER_NAME = "DEFAULT_WRITER_NAME";
+
+    private static $CONFIGURATION = array(
+        self::CONFIG_DEFAULT_WRITER_NAME => "\Pest\DefaultWriter"
+    );
     private static $EXIT_VALUE = 0;
 
     public function __construct($name, $options = null) {
         $this->name = $name;
-        if($options != null){
+        if ($options != null) {
             $this->options = $options;
         }
-        if($this->options & self::OPTION_CHDIR){
+        if ($this->options & self::OPTION_CHDIR) {
             $this->workingDir = getCwd();
             $newCwd = dirname(debug_backtrace()[0]['file']);
-	    chdir($newCwd);
+            chdir($newCwd);
         }
     }
 
@@ -283,14 +156,15 @@ class Pest {
             }
         }
         if ($writer == null) {
-            $writer = self::$DEFAULT_WRITER_NAME;
+            $writer = self::$CONFIGURATION[self::CONFIG_DEFAULT_WRITER_NAME];
         }
-        
+
         self::$EXIT_VALUE = $this->calculateExitValue();
-        
+
         $this->write($writer);
     }
-    private function calculateExitValue(){
+
+    private function calculateExitValue() {
         $passedTests = 0;
         foreach ($this->tests as $test) {
             $recordsCount = count($test->getRecords());
@@ -430,8 +304,12 @@ class Pest {
         });
     }
 
-    public function __destruct(){
-        if($this->options & self::OPTION_CHDIR){
+    public static function SET_CONFIGURATION(array $configuration) {
+        self::$CONFIGURATION = $configuration;
+    }
+
+    public function __destruct() {
+        if ($this->options & self::OPTION_CHDIR) {
             chdir($this->workingDir);
         }
     }
@@ -599,6 +477,44 @@ class Utils {
             }
         }
         rmdir($dir);
+    }
+
+}
+
+class Test {
+
+    private $code, $name, $records = [], $output;
+
+    public function getCode() {
+        return $this->code;
+    }
+
+    public function getName() {
+        return $this->name;
+    }
+
+    public function getRecords() {
+        return $this->records;
+    }
+
+    public function getOutput() {
+        return $this->output;
+    }
+
+    public function setCode($code) {
+        $this->code = $code;
+    }
+
+    public function setName($name) {
+        $this->name = $name;
+    }
+
+    public function setRecords($records) {
+        $this->records = $records;
+    }
+
+    public function setOutput($output) {
+        $this->output = $output;
     }
 
 }
@@ -773,21 +689,100 @@ function DefaultWriter(Pest $pest, $tests) {
     echo PHP_EOL;
 }
 
+function ThreeLineLinuxWriter(Pest $pest, $tests) {
 
-
-if (in_array("--pest_writer", $argv)) {
-    \Pest\Pest::$DEFAULT_WRITER_NAME = $argv[array_search("--pest_writer", $argv) + 1];
-} else if (php_sapi_name() == 'cli') {
-    if (stristr(PHP_OS, 'LINUX')) {
-        \Pest\Pest::$DEFAULT_WRITER_NAME = "\Pest\LinuxWriter";
-    } else if (stristr(PHP_OS, 'DAR')) {
-        \Pest\Pest::$DEFAULT_WRITER_NAME = "\Pest\LinuxWriter";
-    } else if (stristr(PHP_OS, 'WIN') || true) {
-        \Pest\Pest::$DEFAULT_WRITER_NAME = "\Pest\DefaultWriter";
+    $colored = function ($text, $color) {
+        return "\033[" . $color . "m" . $text . "\033[0m";
+    };
+    $testsCount = count($tests);
+    $passedTests = 0;
+    $allRecordsCount = 0;
+    $allPassedRecords = 0;
+    foreach ($tests as $test) {
+        $allRecordsCount += $recordsCount = count($test->getRecords());
+        $passedRecords = 0;
+        foreach ($test->getRecords() as $record) {
+            if ($record->getStatus()) {
+                $passedRecords++;
+                $allPassedRecords++;
+            } else {
+                if ($record->getSkipped() > 0) {
+                    $allRecordsCount += $record->getSkipped();
+                    $recordsCount += $record->getSkipped();
+                }
+            }
+        }
+        if ($recordsCount === $passedRecords) {
+            $passedTests++;
+        }
     }
-} else {
-    \Pest\Pest::$DEFAULT_WRITER_NAME = "\Pest\JsonWriter";
+    if($testsCount == $passedTests){
+        echo $colored($pest->getName(), 42);
+    }else{
+        echo $colored($pest->getName(), 41);
+    }
+    echo PHP_EOL;
+    printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
+    printf("   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
+    echo PHP_EOL;
+
 }
+
+function JsonWriter(Pest $pest, $tests) {
+
+    $jo = new \stdClass();
+    $jo->unitName = $pest->getName();
+    $jo->testsCount = count($tests);
+    $jo->tests = array();
+
+    $passedTests = 0;
+    $allRecordsCount = 0;
+    $allPassedRecords = 0;
+    foreach ($tests as $test) {
+        $joTest = new \stdClass();
+        $allRecordsCount += $recordsCount = count($test->getRecords());
+        $passedRecords = 0;
+        foreach ($test->getRecords() as $record) {
+            if ($record->getStatus()) {
+                $passedRecords++;
+                $allPassedRecords++;
+            } else {
+                if ($record->getSkipped() > 0) {
+                    $allRecordsCount += $record->getSkipped();
+                    $recordsCount += $record->getSkipped();
+                }
+            }
+        }
+        if ($recordsCount === $passedRecords) {
+            $passedTests++;
+        }
+        $joTest->name = $test->getName();
+        $joTest->assertions = array();
+
+        foreach ($test->getRecords() as $record) {
+            $joRecord = new \stdClass();
+            $joRecord->status = $record->getStatus();
+
+            $joRecord->function = $record->getStackInfo()->getFunction();
+            $joRecord->message = (empty($record->getMessage()) ? "" : ": " . $record->getMessage());
+            $joRecord->file = $record->getStackInfo()->getFile();
+            $joRecord->line = ($record->getStackInfo()->getLine());
+            $joRecord->code = $record->getStackInfo()->getCode();
+            $joRecord->values = $record->getValues();
+            $joRecord->skipped = $record->getSkipped();
+            $joTest->assertions[] = $joRecord;
+        }
+
+        $joTest->output = $test->getOutput();
+        $joTest->assertionStatus = array("passed" => $passedRecords, "failed" => $recordsCount - $passedRecords);
+        $jo->tests[] = $joTest;
+    }
+
+    $jo->assertionStatus = array("passed" => $allPassedRecords, "failed" => $allRecordsCount - $allPassedRecords);
+    $jo->testsStatus = array("passed" => $passedTests, "failed" => $jo->testsCount - $passedTests);
+    echo json_encode($jo, JSON_PRETTY_PRINT);
+}
+
 
 
 if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
@@ -798,36 +793,122 @@ if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
             if ($fileInfo->isDot() || $fileInfo->isDir()) {
                 continue;
             }
-            system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' ' . $argv[1] . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . ' --pest_writer "\Pest\ThreeLineLinuxWriter"', $ex_val);
+            array_shift($argv);
+            array_walk($argv, function(&$arg) {
+                $arg = escapeshellarg($arg);
+            });
+            $argv[0] = $argv[0] . DIRECTORY_SEPARATOR . $fileInfo->getFilename();
+            system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' ' . implode(" ", $argv), $ex_val);
             $tests++;
             if ($ex_val == 0) {
                 $passedTests++;
             }
         }
-        $EXIT_VALUE = 100 - (int) (($passedTests / $tests) * 100);
-    } else if (is_file($argv[1])) {
-        system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' ' . $argv[1] . ' --pest_writer "' . \Pest\Pest::$DEFAULT_WRITER_NAME . '"', $EXIT_VALUE);
-    } else if (isset($argv[1]) && $argv[1]{0} != '-') {
-        $tests = $passedTests = 0;
-        foreach (new \DirectoryIterator(getcwd()) as $fileInfo) {
-            if ($fileInfo->isDot() || $fileInfo->isDir()) {
-                continue;
-            }
-
-            if (strpos($fileInfo->getFilename(), $argv[1]) === 0) {
-                system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' ' . $fileInfo->getFilename() . ' --pest_writer "\Pest\ThreeLineLinuxWriter"', $ex_val);
-                $tests++;
-                if ($ex_val == 0) {
-                    $passedTests++;
-                }
-            }
+        if ($tests == 0) {
+            $EXIT_VALUE = 101;
+        } else {
+            $EXIT_VALUE = 100 - (int) (($passedTests / $tests) * 100);
         }
-        $EXIT_VALUE = 100 - (int) (($passedTests / $tests) * 100);
+    } else if (is_file($argv[1])) {
+        array_shift($argv);
+        array_walk($argv, function(&$arg) {
+            $arg = escapeshellarg($arg);
+        });
+        system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' ' . implode(" ", $argv) . ' ', $EXIT_VALUE);
+    } else {
+        echo <<<EOF
+        Pest - Usage:
+        
+        pest [Test file | Dir with Test files ] [--<option>]* 
+          
+           Test file: Run this file as a php pest test file
+           Dir with Test files: Run all files in this directory as a php pest test files
+          
+           
+           --pest_writer    values:
+                                \Pest\LinuxWriter
+                                \Pest\DefaultWriter
+                                \Pest\JsonWriter
+                                \Pest\ThreeLineLinuxWriter
+          
+          
+          --pest_noexit     Pest rewrites the exit code to the percentage of the failed tests. 
+                            Use this option if you are using own exit codes.
+  
+   
+EOF;
     }
     exit($EXIT_VALUE);
-} else if (!in_array("--pest_noexit", $argv)) {
-    \Pest\Pest::SETUP_EXIT_REWRITE();
+} else {
+    parseArgv($argv, $flags, $options, $arguments);
+    $config = array();
+    
+    if (!isset($flags["pest_noexit"])) {
+        \Pest\Pest::SETUP_EXIT_REWRITE();
+    }
+    
+    if (isset($options["pest_writer"])) {
+        $writer = $options["pest_writer"];
+    } else if (php_sapi_name() == 'cli') {
+        if (stristr(PHP_OS, 'LINUX') || stristr(PHP_OS, 'DAR')) {
+            $writer = "\Pest\LinuxWriter";
+        } else if (stristr(PHP_OS, 'WIN') || true) {
+            $writer = "\Pest\DefaultWriter";
+        }
+    } else {
+        $writer = "\Pest\JsonWriter";
+    }
+    $config[\Pest\Pest::CONFIG_DEFAULT_WRITER_NAME] = $writer;
+    
+    
+    
+    
+    
+    
+    \Pest\Pest::SET_CONFIGURATION($config)   ;
 }
 
+function parseArgv(array $argv, &$flags, &$options, &$argumants) {
+    foreach ($argv as $arg) {
+        if (strlen($arg) > 1) {
+            if ($arg{0} == "-" && $arg{1} != "-") {
+                $strInfo = count_chars(substr($arg, 1), 3);
+                foreach (str_split($strInfo) as $chr) {
+                    $flags[$chr] = $chr;
+                }
+            } else if ($arg{0} == "-" && $arg{1} == "-") {
+                if (($pos = strpos($arg, "=")) !== false) {
+                    $pair = substr($arg, 2);
+                    $key = substr($pair, 0, $pos - 2);
+                    $value = substr($pair, $pos - 2 + 1);
+                    $options[$key] = $value;
+                } else {
+                    $flags[substr($arg, 2)] = substr($arg, 2);
+                }
+            } else if (($pos = strpos($arg, "=")) !== false) {
+                $pair = substr($arg, 2);
+                $key = substr($pair, 0, $pos - 2);
+                $value = substr($pair, $pos - 2 + 1);
+                $options[$key] = $value;
+            } else {
+                $argumants[] = $arg;
+            }
+        }
+    }
+}
 
+function toArgStr($arga) {
+    $str = "";
+    foreach ($arga['flags'] as $key => $value) {
+        $str .= "-" . $value . " ";
+    }
+    foreach ($arga['options'] as $key => $value) {
+        $str .= escapeshellarg("--" . $key . "=" . $value) . " ";
+    }
+    foreach ($arga['arguments'] as $arg) {
+        $str .= escapeshellarg($arg) . " ";
+    }
+
+    return $str;
+}
 ?>
