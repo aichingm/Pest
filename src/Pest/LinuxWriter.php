@@ -2,12 +2,11 @@
 
 namespace Pest;
 
-function LinuxWriter(Pest $pest, $tests) {
-
+function LinuxWriter(Pest $pest, $tests, $config) {
     $colored = function ($text, $color) {
         return "\033[" . $color . "m" . $text . "\033[0m";
     };
-    
+
     $dump = function($mixed) {
         switch (gettype($mixed)) {
             case 'string':
@@ -40,17 +39,27 @@ function LinuxWriter(Pest $pest, $tests) {
                 }
             }
         }
+
         if ($recordsCount === $passedRecords) {
             $status = "[" . $colored("passed", 42) . "] ";
             $passedTests++;
+            if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+                continue;
+            }
         } else {
             $status = "[" . $colored("failed", 41) . "] ";
         }
 
         echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
-
+        if ($recordsCount === $passedRecords && isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+            continue;
+        }
         foreach ($test->getRecords() as $record) {
             if ($record->getStatus()) {
+
+                if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+                    continue;
+                }
                 $status = "      [" . $colored("passed", 42) . "] ";
             } else {
                 $status = "      [" . $colored("failed", 41) . "] ";

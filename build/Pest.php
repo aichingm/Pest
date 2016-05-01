@@ -68,6 +68,7 @@ class Pest {
 
     const OPTION_CHDIR = 1;
     const CONFIG_DEFAULT_WRITER_NAME = "DEFAULT_WRITER_NAME";
+    const CONFIG_ONLY_FAILED = "ONLY_FAILED";
 
     private static $CONFIGURATION = array(
         self::CONFIG_DEFAULT_WRITER_NAME => "\Pest\DefaultWriter"
@@ -135,7 +136,7 @@ class Pest {
     }
 
     public function write(callable $writer) {
-        $writer($this, $this->tests);
+        $writer($this, $this->tests, self::$CONFIGURATION);
     }
 
     public function run(callable $writer = null) {
@@ -519,12 +520,11 @@ class Test {
 
 }
 
-function LinuxWriter(Pest $pest, $tests) {
-
+function LinuxWriter(Pest $pest, $tests, $config) {
     $colored = function ($text, $color) {
         return "\033[" . $color . "m" . $text . "\033[0m";
     };
-    
+
     $dump = function($mixed) {
         switch (gettype($mixed)) {
             case 'string':
@@ -557,17 +557,27 @@ function LinuxWriter(Pest $pest, $tests) {
                 }
             }
         }
+
         if ($recordsCount === $passedRecords) {
             $status = "[" . $colored("passed", 42) . "] ";
             $passedTests++;
+            if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+                continue;
+            }
         } else {
             $status = "[" . $colored("failed", 41) . "] ";
         }
 
         echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
-
+        if ($recordsCount === $passedRecords && isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+            continue;
+        }
         foreach ($test->getRecords() as $record) {
             if ($record->getStatus()) {
+
+                if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+                    continue;
+                }
                 $status = "      [" . $colored("passed", 42) . "] ";
             } else {
                 $status = "      [" . $colored("failed", 41) . "] ";
@@ -607,7 +617,7 @@ function LinuxWriter(Pest $pest, $tests) {
     echo PHP_EOL;
 }
 
-function DefaultWriter(Pest $pest, $tests) {
+function DefaultWriter(Pest $pest, $tests, $config) {
     $dump = function($mixed) {
         switch (gettype($mixed)) {
             case 'string':
@@ -642,6 +652,9 @@ function DefaultWriter(Pest $pest, $tests) {
         if ($recordsCount === $passedRecords) {
             $status = "[passed] ";
             $passedTests++;
+            if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+                continue;
+            }
         } else {
             $status = "[failed] ";
         }
@@ -650,6 +663,10 @@ function DefaultWriter(Pest $pest, $tests) {
 
         foreach ($test->getRecords() as $record) {
             if ($record->getStatus()) {
+
+                if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+                    continue;
+                }
                 $status = "      [passed] ";
             } else {
                 $status = "      [failed] ";
@@ -689,7 +706,7 @@ function DefaultWriter(Pest $pest, $tests) {
     echo PHP_EOL;
 }
 
-function ThreeLineLinuxWriter(Pest $pest, $tests) {
+function ThreeLineLinuxWriter(Pest $pest, $tests, $config) {
 
     $colored = function ($text, $color) {
         return "\033[" . $color . "m" . $text . "\033[0m";
@@ -716,16 +733,18 @@ function ThreeLineLinuxWriter(Pest $pest, $tests) {
             $passedTests++;
         }
     }
-    if($testsCount == $passedTests){
+    if ($testsCount == $passedTests) {
+        if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+            return;
+        }
         echo $colored($pest->getName(), 42);
-    }else{
+    } else {
         echo $colored($pest->getName(), 41);
     }
     echo PHP_EOL;
     printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
     printf("   Test status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $passedTests, $testsCount - $passedTests, $passedTests / $testsCount * 100);
     echo PHP_EOL;
-
 }
 
 function JsonWriter(Pest $pest, $tests) {
@@ -787,7 +806,7 @@ function JsonWriter(Pest $pest, $tests) {
 
 if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
     $EXIT_VALUE = 0;
-    if (is_dir($argv[1])) {
+    if (count($argv) > 1 && is_dir($argv[1])) {
         $tests = $passedTests = 0;
         foreach (new \DirectoryIterator($argv[1]) as $fileInfo) {
             if ($fileInfo->isDot() || $fileInfo->isDir()) {
@@ -809,7 +828,7 @@ if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
         } else {
             $EXIT_VALUE = 100 - (int) (($passedTests / $tests) * 100);
         }
-    } else if (is_file($argv[1])) {
+    } else if (count($argv) > 1 && is_file($argv[1])) {
         array_shift($argv);
         array_walk($argv, function(&$arg) {
             $arg = escapeshellarg($arg);
@@ -825,15 +844,18 @@ if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
            Dir with Test files: Run all files in this directory as a php pest test files
           
            
-           --pest_writer    values:
-                                \Pest\LinuxWriter
-                                \Pest\DefaultWriter
-                                \Pest\JsonWriter
-                                \Pest\ThreeLineLinuxWriter
-          
-          
-          --pest_noexit     Pest rewrites the exit code to the percentage of the failed tests. 
-                            Use this option if you are using own exit codes.
+           --pest_writer        values:
+                                    \Pest\LinuxWriter
+                                    \Pest\DefaultWriter
+                                    \Pest\JsonWriter
+                                    \Pest\ThreeLineLinuxWriter
+            
+            
+           --pest_noexit          Pest rewrites the exit code to the percentage of the failed tests. 
+                                  Use this option if you are using own exit codes.
+            
+           --pest_only_failed     Show only failed Tests and failed assertions in the output. 
+                                  This doesn't apply for the JsonWriter.
   
    
 EOF;
@@ -842,11 +864,14 @@ EOF;
 } else {
     parseArgv($argv, $flags, $options, $arguments);
     $config = array();
-    
+
     if (!isset($flags["pest_noexit"])) {
         \Pest\Pest::SETUP_EXIT_REWRITE();
     }
-    
+    if (isset($flags["pest_only_failed"])) {
+        $config[\Pest\Pest::CONFIG_ONLY_FAILED] = true;
+    }
+
     if (isset($options["pest_writer"])) {
         $writer = $options["pest_writer"];
     } else if (php_sapi_name() == 'cli') {
@@ -859,13 +884,13 @@ EOF;
         $writer = "\Pest\JsonWriter";
     }
     $config[\Pest\Pest::CONFIG_DEFAULT_WRITER_NAME] = $writer;
-    
-    
-    
-    
-    
-    
-    \Pest\Pest::SET_CONFIGURATION($config)   ;
+
+
+
+
+
+
+    \Pest\Pest::SET_CONFIGURATION($config);
 }
 
 function parseArgv(array $argv, &$flags, &$options, &$argumants) {

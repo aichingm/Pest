@@ -2,7 +2,7 @@
 
 namespace Pest;
 
-function DefaultWriter(Pest $pest, $tests) {
+function DefaultWriter(Pest $pest, $tests, $config) {
     $dump = function($mixed) {
         switch (gettype($mixed)) {
             case 'string':
@@ -37,6 +37,9 @@ function DefaultWriter(Pest $pest, $tests) {
         if ($recordsCount === $passedRecords) {
             $status = "[passed] ";
             $passedTests++;
+            if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+                continue;
+            }
         } else {
             $status = "[failed] ";
         }
@@ -45,6 +48,10 @@ function DefaultWriter(Pest $pest, $tests) {
 
         foreach ($test->getRecords() as $record) {
             if ($record->getStatus()) {
+
+                if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+                    continue;
+                }
                 $status = "      [passed] ";
             } else {
                 $status = "      [failed] ";

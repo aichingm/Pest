@@ -2,7 +2,7 @@
 
 if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
     $EXIT_VALUE = 0;
-    if (is_dir($argv[1])) {
+    if (count($argv) > 1 && is_dir($argv[1])) {
         $tests = $passedTests = 0;
         foreach (new \DirectoryIterator($argv[1]) as $fileInfo) {
             if ($fileInfo->isDot() || $fileInfo->isDir()) {
@@ -24,7 +24,7 @@ if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
         } else {
             $EXIT_VALUE = 100 - (int) (($passedTests / $tests) * 100);
         }
-    } else if (is_file($argv[1])) {
+    } else if (count($argv) > 1 && is_file($argv[1])) {
         array_shift($argv);
         array_walk($argv, function(&$arg) {
             $arg = escapeshellarg($arg);
@@ -40,15 +40,18 @@ if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
            Dir with Test files: Run all files in this directory as a php pest test files
           
            
-           --pest_writer    values:
-                                \Pest\LinuxWriter
-                                \Pest\DefaultWriter
-                                \Pest\JsonWriter
-                                \Pest\ThreeLineLinuxWriter
-          
-          
-          --pest_noexit     Pest rewrites the exit code to the percentage of the failed tests. 
-                            Use this option if you are using own exit codes.
+           --pest_writer        values:
+                                    \Pest\LinuxWriter
+                                    \Pest\DefaultWriter
+                                    \Pest\JsonWriter
+                                    \Pest\ThreeLineLinuxWriter
+            
+            
+           --pest_noexit          Pest rewrites the exit code to the percentage of the failed tests. 
+                                  Use this option if you are using own exit codes.
+            
+           --pest_only_failed     Show only failed Tests and failed assertions in the output. 
+                                  This doesn't apply for the JsonWriter.
   
    
 EOF;
@@ -57,11 +60,14 @@ EOF;
 } else {
     parseArgv($argv, $flags, $options, $arguments);
     $config = array();
-    
+
     if (!isset($flags["pest_noexit"])) {
         \Pest\Pest::SETUP_EXIT_REWRITE();
     }
-    
+    if (isset($flags["pest_only_failed"])) {
+        $config[\Pest\Pest::CONFIG_ONLY_FAILED] = true;
+    }
+
     if (isset($options["pest_writer"])) {
         $writer = $options["pest_writer"];
     } else if (php_sapi_name() == 'cli') {
@@ -74,13 +80,13 @@ EOF;
         $writer = "\Pest\JsonWriter";
     }
     $config[\Pest\Pest::CONFIG_DEFAULT_WRITER_NAME] = $writer;
-    
-    
-    
-    
-    
-    
-    \Pest\Pest::SET_CONFIGURATION($config)   ;
+
+
+
+
+
+
+    \Pest\Pest::SET_CONFIGURATION($config);
 }
 
 function parseArgv(array $argv, &$flags, &$options, &$argumants) {

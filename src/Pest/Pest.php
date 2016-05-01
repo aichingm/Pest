@@ -14,6 +14,7 @@ class Pest {
 
     const OPTION_CHDIR = 1;
     const CONFIG_DEFAULT_WRITER_NAME = "DEFAULT_WRITER_NAME";
+    const CONFIG_ONLY_FAILED = "ONLY_FAILED";
 
     private static $CONFIGURATION = array(
         self::CONFIG_DEFAULT_WRITER_NAME => "\Pest\DefaultWriter"
@@ -81,7 +82,7 @@ class Pest {
     }
 
     public function write(callable $writer) {
-        $writer($this, $this->tests);
+        $writer($this, $this->tests, self::$CONFIGURATION);
     }
 
     public function run(callable $writer = null) {
