@@ -4,15 +4,17 @@ if (realpath($_SERVER['PHP_SELF']) == __FILE__) {
     $EXIT_VALUE = 0;
     if (count($argv) > 1 && is_dir($argv[1])) {
         $tests = $passedTests = 0;
-        foreach (new \DirectoryIterator($argv[1]) as $fileInfo) {
+        $dir = $argv[1];
+        array_shift($argv);
+        array_walk($argv, function(&$arg) {
+            $arg = escapeshellarg($arg);
+        });
+        foreach (new \DirectoryIterator($dir) as $fileInfo) {
             if ($fileInfo->isDot() || $fileInfo->isDir()) {
                 continue;
             }
-            array_shift($argv);
-            array_walk($argv, function(&$arg) {
-                $arg = escapeshellarg($arg);
-            });
-            $argv[0] = $argv[0] . DIRECTORY_SEPARATOR . $fileInfo->getFilename();
+
+            $argv[0] = escapeshellarg($dir . DIRECTORY_SEPARATOR . $fileInfo->getFilename());
             system($_SERVER['_'] . ' -d auto_prepend_file=' . __FILE__ . ' ' . implode(" ", $argv), $ex_val);
             $tests++;
             if ($ex_val == 0) {
