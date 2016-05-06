@@ -2,11 +2,8 @@
 
 namespace Pest;
 
-function ThreeLineLinuxWriter(Pest $pest, $tests, $config) {
+function ThreeLineWriter(Pest $pest, $tests, $config) {
 
-    $colored = function ($text, $color) {
-        return "\033[" . $color . "m" . $text . "\033[0m";
-    };
     $testsCount = count($tests);
     $passedTests = 0;
     $allRecordsCount = 0;
@@ -33,9 +30,9 @@ function ThreeLineLinuxWriter(Pest $pest, $tests, $config) {
         if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
             return;
         }
-        echo $colored($pest->getName(), 42);
+        echo $pest->getName();
     } else {
-        echo $colored($pest->getName(), 41);
+        echo $pest->getName();
     }
     echo PHP_EOL;
     printf("   Assertion status: [passed: %d, failed: %d], success rate: %01.2f%%\n", $allPassedRecords, $allRecordsCount - $allPassedRecords, $allPassedRecords / $allRecordsCount * 100);
