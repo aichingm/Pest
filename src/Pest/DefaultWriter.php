@@ -34,7 +34,8 @@ function DefaultWriter(Pest $pest, $tests, $config) {
                 }
             }
         }
-        if ($recordsCount === $passedRecords) {
+
+        if ($recordsCount === $passedRecords && ($exception = $test->getException()) == null) {
             $status = "[passed] ";
             $passedTests++;
             if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
@@ -45,6 +46,20 @@ function DefaultWriter(Pest $pest, $tests, $config) {
         }
 
         echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
+        if (($exception = $test->getException()) != null) {
+            $exception instanceof \Exception;
+            echo "    Uncought exception:" . PHP_EOL.PHP_EOL;
+            echo "        Type:    " . get_class($exception) . PHP_EOL;
+            echo "        Message: " . $exception->getMessage() . PHP_EOL;
+            echo "        Code:    " . $exception->getCode() . PHP_EOL;
+            echo "        File:    " . $exception->getFile() . PHP_EOL;
+            echo "        Line:    " . $exception->getLine() . PHP_EOL;
+            echo "        Stacktrace:    " . PHP_EOL;
+            echo "            ". str_replace("\n", "\n            ", $exception->getTraceAsString()) . PHP_EOL;
+
+            continue;
+        }
+
 
         foreach ($test->getRecords() as $record) {
             if ($record->getStatus()) {

@@ -31,6 +31,15 @@ function JsonWriter(Pest $pest, $tests) {
             $passedTests++;
         }
         $joTest->name = $test->getName();
+        if (($exception = $test->getException()) != null) {
+            $joTest->exception = new \stdClass;
+            $joTest->exception->type = get_class($exception);
+            $joTest->exception->message = $exception->getMessage();
+            $joTest->exception->code = $exception->getCode();
+            $joTest->exception->file = $exception->getFile();
+            $joTest->exception->line = $exception->getLine();
+            $joTest->exception->stacktrace = $exception->getTraceAsString();
+        }
         $joTest->assertions = array();
 
         foreach ($test->getRecords() as $record) {

@@ -55,9 +55,10 @@ class Pest {
         $this->records = [];
     }
 
-    private function saveRecords(Test $test, $output) {
+    private function saveRecords(Test $test, $output, \Exception $exception = null) {
         $test->setRecords($this->records);
         $test->setOutput($output);
+        $test->setException($exception);
     }
 
     private function extractStackInfo($depth = 1) {
@@ -95,8 +96,13 @@ class Pest {
             $this->cleanUpRecords();
             $code = $test->getCode();
             ob_start();
-            $code();
-            $this->saveRecords($test, ob_get_clean());
+            $exception = null;
+            try {
+                $code();
+            } catch (\Exception $e) {
+                $exception = $e;
+            }
+            $this->saveRecords($test, ob_get_clean(), $exception);
             if ($this->cleanUp) {
                 $code = $this->cleanUp;
                 $code();

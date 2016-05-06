@@ -4,7 +4,7 @@ namespace Pest;
 
 class Test {
 
-    private $code, $name, $records = [], $output;
+    private $code, $name, $records = [], $output, $exception;
 
     public function getCode() {
         return $this->code;
@@ -22,6 +22,10 @@ class Test {
         return $this->output;
     }
 
+    public function getException() {
+        return $this->exception;
+    }
+
     public function setCode($code) {
         $this->code = $code;
     }
@@ -36,6 +40,10 @@ class Test {
 
     public function setOutput($output) {
         $this->output = $output;
+    }
+
+    public function setException(\Exception $exception = null) {
+        $this->exception = $exception;
     }
 
 }

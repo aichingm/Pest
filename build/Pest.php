@@ -109,9 +109,10 @@ class Pest {
         $this->records = [];
     }
 
-    private function saveRecords(Test $test, $output) {
+    private function saveRecords(Test $test, $output, \Exception $exception = null) {
         $test->setRecords($this->records);
         $test->setOutput($output);
+        $test->setException($exception);
     }
 
     private function extractStackInfo($depth = 1) {
@@ -149,8 +150,13 @@ class Pest {
             $this->cleanUpRecords();
             $code = $test->getCode();
             ob_start();
-            $code();
-            $this->saveRecords($test, ob_get_clean());
+            $exception = null;
+            try {
+                $code();
+            } catch (\Exception $e) {
+                $exception = $e;
+            }
+            $this->saveRecords($test, ob_get_clean(), $exception);
             if ($this->cleanUp) {
                 $code = $this->cleanUp;
                 $code();
@@ -484,7 +490,7 @@ class Utils {
 
 class Test {
 
-    private $code, $name, $records = [], $output;
+    private $code, $name, $records = [], $output, $exception;
 
     public function getCode() {
         return $this->code;
@@ -502,6 +508,10 @@ class Test {
         return $this->output;
     }
 
+    public function getException() {
+        return $this->exception;
+    }
+
     public function setCode($code) {
         $this->code = $code;
     }
@@ -516,6 +526,10 @@ class Test {
 
     public function setOutput($output) {
         $this->output = $output;
+    }
+
+    public function setException(\Exception $exception = null) {
+        $this->exception = $exception;
     }
 
 }
@@ -558,7 +572,7 @@ function LinuxWriter(Pest $pest, $tests, $config) {
             }
         }
 
-        if ($recordsCount === $passedRecords) {
+        if ($recordsCount === $passedRecords && ($exception = $test->getException()) == null) {
             $status = "[" . $colored("passed", 42) . "] ";
             $passedTests++;
             if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
@@ -569,9 +583,20 @@ function LinuxWriter(Pest $pest, $tests, $config) {
         }
 
         echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
-        if ($recordsCount === $passedRecords && isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
+        if (($exception = $test->getException()) != null) {
+            $exception instanceof \Exception;
+            echo "    Uncought exception:" . PHP_EOL.PHP_EOL;
+            echo "        Type:    " . get_class($exception) . PHP_EOL;
+            echo "        Message: " . $exception->getMessage() . PHP_EOL;
+            echo "        Code:    " . $exception->getCode() . PHP_EOL;
+            echo "        File:    " . $exception->getFile() . PHP_EOL;
+            echo "        Line:    " . $exception->getLine() . PHP_EOL;
+            echo "        Stacktrace:    " . PHP_EOL;
+            echo "            ". str_replace("\n", "\n            ", $exception->getTraceAsString()) . PHP_EOL;
+
             continue;
         }
+
         foreach ($test->getRecords() as $record) {
             if ($record->getStatus()) {
 
@@ -649,7 +674,8 @@ function DefaultWriter(Pest $pest, $tests, $config) {
                 }
             }
         }
-        if ($recordsCount === $passedRecords) {
+
+        if ($recordsCount === $passedRecords && ($exception = $test->getException()) == null) {
             $status = "[passed] ";
             $passedTests++;
             if (isset($config[\Pest\Pest::CONFIG_ONLY_FAILED])) {
@@ -660,6 +686,20 @@ function DefaultWriter(Pest $pest, $tests, $config) {
         }
 
         echo "   " . $status . $test->getName() . PHP_EOL . PHP_EOL;
+        if (($exception = $test->getException()) != null) {
+            $exception instanceof \Exception;
+            echo "    Uncought exception:" . PHP_EOL.PHP_EOL;
+            echo "        Type:    " . get_class($exception) . PHP_EOL;
+            echo "        Message: " . $exception->getMessage() . PHP_EOL;
+            echo "        Code:    " . $exception->getCode() . PHP_EOL;
+            echo "        File:    " . $exception->getFile() . PHP_EOL;
+            echo "        Line:    " . $exception->getLine() . PHP_EOL;
+            echo "        Stacktrace:    " . PHP_EOL;
+            echo "            ". str_replace("\n", "\n            ", $exception->getTraceAsString()) . PHP_EOL;
+
+            continue;
+        }
+
 
         foreach ($test->getRecords() as $record) {
             if ($record->getStatus()) {
@@ -729,7 +769,7 @@ function ThreeLineLinuxWriter(Pest $pest, $tests, $config) {
                 }
             }
         }
-        if ($recordsCount === $passedRecords) {
+        if ($recordsCount === $passedRecords && $test->getException() != null) {
             $passedTests++;
         }
     }
@@ -776,6 +816,15 @@ function JsonWriter(Pest $pest, $tests) {
             $passedTests++;
         }
         $joTest->name = $test->getName();
+        if (($exception = $test->getException()) != null) {
+            $joTest->exception = new \stdClass;
+            $joTest->exception->type = get_class($exception);
+            $joTest->exception->message = $exception->getMessage();
+            $joTest->exception->code = $exception->getCode();
+            $joTest->exception->file = $exception->getFile();
+            $joTest->exception->line = $exception->getLine();
+            $joTest->exception->stacktrace = $exception->getTraceAsString();
+        }
         $joTest->assertions = array();
 
         foreach ($test->getRecords() as $record) {

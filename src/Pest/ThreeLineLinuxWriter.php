@@ -25,7 +25,7 @@ function ThreeLineLinuxWriter(Pest $pest, $tests, $config) {
                 }
             }
         }
-        if ($recordsCount === $passedRecords) {
+        if ($recordsCount === $passedRecords && $test->getException() != null) {
             $passedTests++;
         }
     }
