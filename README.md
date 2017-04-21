@@ -1,18 +1,18 @@
-#Pest#
+# Pest #
 Pest is a micro unit testing framework for php applications. 
 
 As the name says testing isn't always a joy so I developed Pest (PHP-test) to make testing as simple and fast as possible. 
 No need to learn how to write tests or use a clunky testing framework if you know php already.
 
-##Requirements##
+## Requirements ##
 No requirements - except php 5.4+
 
-##Instalation##
+## Instalation ##
 Pest builds in to a single file located under `build/Pest.php`. This file is the only file you need to run Pest compatible unit tests. 
 You can download it from github.com or clone the repository and copy it from the working tree.
 
 
-##Examples##
+## Examples ##
 
     <?php
     
@@ -24,7 +24,7 @@ You can download it from github.com or clone the repository and copy it from the
 
 _Note_ You don't need to require a specific version of Pest or any other Pest like implementation.
 
-##Run Tests##
+## Run Tests ##
 Run a test file with:
     
     php pathTo/Pest.php myTestsFile.php
@@ -47,9 +47,9 @@ _Note_ This is also useful if you want to quickly switch between Pest implementa
 
 _Note_ Pest will __not__ change the exit code if you use this method. The command line call will exit with whatever you test script exits!
 
-##Documentation##
+## Documentation ##
 
-###Getting Started###
+### Getting Started ###
 Creating a new test suite object:
 
     $test = new \Pest\Pest("MyTests");
@@ -70,7 +70,7 @@ We did it! Thats all you need to know to get started.
         $test->assertEquals(5, 2 + 3);
     });
 
-###Assertion Methods###
+### Assertion Methods ###
 
 
 _Note_ The $message parameter is not necessary!
@@ -108,7 +108,7 @@ _Note_ The $message parameter is not necessary!
     $test->assertEqulas([3, 2, 1], [1, 2, 3], "They are the same");
 
 
-###Exception Methods###
+### Exception Methods ###
 
 _Note_ The $message parameter is not necessary!
 
@@ -124,7 +124,7 @@ _Note_ The $message parameter is not necessary!
 
     noException(function(){try{throw new \ErrorException();}catch($e){}}, "This will pass the test. All exceptions are handled inside the function")
 
-##Writer##
+## Writer ##
 A writer is a function which formats the test results and displays it. 
 You can switch between writers by appending `--pest_writer "\Pest\JsonWriter"` to your run command. 
 `\Pest\JsonWriter` is the class name of the writer you want to use. If you want to use your own writer make sure that you preload (require) it somewhere. 
@@ -135,15 +135,15 @@ Currently there are three writers implemented: `DefaultWriter`, `LinuxWriter` an
 1. JsonWriter writes the results of the tests in `json` format to the standard output.
 1. ThreeLineLinuxWriter writes the results of the tests in a very short and colored format (only three lines) to the standard output (This may only work on unix systems).
 
-##Integrating Pest##
+## Integrating Pest ##
 1. JsonWriter
 1. Exit Codes
 
-###JsonWriter###
+### JsonWriter ###
 
 Generally this is the best way to get computable data out of Pest. The Json format is widely used and has implementations in various programming languages.
 
-###Exit Codes###
+### Exit Codes ###
 
 Pest, if not used via `-d autp_prepend_file=abc/Pest.php`, exits with the percentage of the test which __failed__! 
 `0` means all test passed, `100` means all tests failed.
@@ -152,15 +152,15 @@ _Note_ All exit codes above `100` are reserved for errors and future functions.
 
 
 
-##Building Pest##
+## Building Pest ##
 To keep Pest a single file program it is needed to run the `build.php` script in the root of the repository. It will take all files in `src/Pest` and bundle them in to one file stored in build/Pest.php.
 To run the build script simply run `php build.php` from the command line. 
 _Note_ Please run the the frameworks tests to make sure that every thing is cool. 
 
-##Running the Pest Tests##
+## Running the Pest Tests ##
 To test the framework run `php -d auto_prepend_file=build/Pest.php tests/tests.php`.
 
-##License##
+## License ##
 
     The MIT License (MIT)
     
